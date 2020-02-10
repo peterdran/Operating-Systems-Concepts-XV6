@@ -5,6 +5,8 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "pstat.h"
+#include "rand.h"
 
 struct {
   struct spinlock lock;
@@ -18,6 +20,8 @@ extern void forkret(void);
 extern void trapret(void);
 
 static void wakeup1(void *chan);
+
+struct pstat *pstatInfo;
 
 void
 pinit(void)
@@ -261,11 +265,14 @@ scheduler(void)
     // Enable interrupts on this processor.
     sti();
 
+	//int totalTickets = 0;
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
+
+		//totalTickets += pstatInfo->tickets[p];
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -441,6 +448,11 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+int generatelottery(int totaltickets)
+{
+	return random_at_most(totaltickets);
 }
 
 
