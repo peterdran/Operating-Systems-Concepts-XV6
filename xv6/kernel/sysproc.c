@@ -5,6 +5,7 @@
 #include "mmu.h"
 #include "proc.h"
 #include "sysfunc.h"
+#include "pstat.h"
 
 int pidCount = 0;
 
@@ -96,4 +97,23 @@ int
 sys_getpidcount(void)
 {
 	return pidCount;
+}
+
+int
+sys_settickets(void)
+{
+	int tickets;
+  if(argint(0, &tickets) < 0)
+    return -1;
+
+  return -1;//Not implemented yet;
+}
+
+int
+sys_getpinfo(void)
+{
+	//struct pstat* stats;
+	//if(argptr(0, stats) < 0)
+	//	return -1;
+	return 0;
 }
