@@ -21,8 +21,6 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
-struct pstat *pstatInfo;
-
 void
 pinit(void)
 {
@@ -49,6 +47,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->tickets = 1;
   release(&ptable.lock);
 
   // Allocate kernel stack if possible.
@@ -156,7 +155,9 @@ fork(void)
     if(proc->ofile[i])
       np->ofile[i] = filedup(proc->ofile[i]);
   np->cwd = idup(proc->cwd);
+  np->tickets = proc->tickets;
  
+
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
@@ -265,27 +266,39 @@ scheduler(void)
     // Enable interrupts on this processor.
     sti();
 
-	//int totalTickets = 0;
-    // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+	int totalTickets = 0;
+	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state == RUNNABLE)
+	  {
+        totalTickets += p->tickets;
+	  }
+	}
+	
+	int winner = random_at_most(totalTickets);
+    int counter = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
 
-		//totalTickets += pstatInfo->tickets[p];
-
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-      swtch(&cpu->scheduler, proc->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      proc = 0;
+		counter += p->tickets;
+		if(counter >= winner)
+		{
+			p->ticks++;
+			// Switch to chosen process.  It is the process's job
+			// to release ptable.lock and then reacquire it
+			// before jumping back to us.
+			proc = p;
+			switchuvm(p);
+			p->state = RUNNING;
+			swtch(&cpu->scheduler, proc->context);
+			switchkvm();
+			
+			// Process is done running for now.
+			// It should have changed its p->state before coming back.
+			proc = 0;
+			break;
+		}
     }
     release(&ptable.lock);
 
@@ -449,10 +462,3 @@ procdump(void)
     cprintf("\n");
   }
 }
-
-int generatelottery(int totaltickets)
-{
-	return random_at_most(totaltickets);
-}
-
-

@@ -106,7 +106,8 @@ sys_settickets(void)
   if(argint(0, &tickets) < 0)
     return -1;
 
-  return -1;//Not implemented yet;
+	proc->tickets = tickets;
+  return 0;
 }
 
 int
